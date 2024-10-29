@@ -10,6 +10,7 @@ var (
 	MemberConflict = errors.New("Member đã tồn tại")
 	ConvsersNotFound =errors.New("Không tìm thấy cuộc trò chuyện nào")
 	MemNotFound =errors.New("Không tìm thấy cuộc trò chuyện nào")
+	SearchNotFound =errors.New("Không tìm thấy người dùng")
 	MessageNotFound =errors.New("Không tìm thấy tin nhắn nào")
 	FriendshipConflict =errors.New("Friendship đã tồn tại")
 	FriendListNotFound =errors.New("Không tìm thấy bạn bè nào")

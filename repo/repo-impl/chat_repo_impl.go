@@ -19,24 +19,22 @@ type ConversRepoImpl struct {
 	sql *db.Sql
 }
 
-// MarkMessageAsSeen implements repo.ConversRepo.
-func (g ConversRepoImpl) MarkMessageAsSeen(c context.Context, messageId string, userId string) (model.Message,error) {
-	var mes =model.Message{}
-	_, err := g.sql.Db.Exec(`
-		UPDATE messages
-		SET seen_by = array_append(seen_by, $1)
-		WHERE message_id = $2 AND NOT $1 = ANY(seen_by)`, userId, messageId)
-	if err != nil {
-		return mes,err
+// UpdateLastMessageSeen implements repo.ConversRepo.
+func (g ConversRepoImpl) UpdateLastMessageSeen(c context.Context, conversId string, messageId string,userId string) (model.ResponSeenMessage,error) {
+	statement := `UPDATE conversation_members
+					SET last_message_seen_id = $1
+					WHERE conversation_id = $2 AND user_id = $3
+					RETURNING conversation_id,last_message_seen_id,user_id
+					`
+	var member_updated  model.ResponSeenMessage	
+	err := g.sql.Db.GetContext(c,&member_updated,statement,messageId,conversId,userId)
+	if err!=nil {
+		return member_updated,err
 	}
-	err = g.sql.Db.GetContext(c, &mes, `SELECT * FROM messages WHERE message_id = $1`, messageId)
-	if err != nil {
-		return mes, err
-	}
-
-	return mes, nil
-
+	return member_updated,nil
 }
+
+// MarkMessageAsSeen implements repo.ConversRepo.
 
 // LoadListMembers implements repo.ConversRepo.
 func (g ConversRepoImpl) LoadListMembers(c context.Context, conversId string) ([]model.ConversationMember, error) {
@@ -50,7 +48,7 @@ func (g ConversRepoImpl) LoadListMembers(c context.Context, conversId string) ([
 					conversation_members.joined_at AS joined_at
 				FROM users
 				INNER JOIN conversation_members
-				ON conversation_members.conversation_id = $1  AND conversation_members.user_id = users.user_id
+				ON conversation_members.conversation_id = $1  AND conversation_members.user_id = users.user_id 
 				`
 	err := g.sql.Db.SelectContext(c, &listMem, statement, conversId)
 	if err != nil {
@@ -63,7 +61,7 @@ func (g ConversRepoImpl) LoadListMembers(c context.Context, conversId string) ([
 }
 
 // LoadListConvers implements repo.ConversRepo.
-func (g ConversRepoImpl) LoadListConvers(c context.Context, userId string) ([]model.Conversation, error) {
+func (g ConversRepoImpl) LoadListConversation(c context.Context, userId string) ([]model.Conversation, error) {
 	var listConvers []model.Conversation
 	statement := `SELECT 
 					conversations.conversation_id, 
@@ -93,7 +91,7 @@ func (g ConversRepoImpl) LoadMessages(c context.Context, conversId string) ([]mo
 					*
 					FROM messages
 					WHERE messages.conversation_id = $1
-					ORDER BY sent_at desc
+					ORDER BY sent_at DESC
 					LIMIT 30`
 	err := g.sql.Db.SelectContext(c, &listMessage, statement, conversId)
 	if err != nil {

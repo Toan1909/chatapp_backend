@@ -19,18 +19,25 @@ func (api *API) SetupRouter() {
 	//user
 	api.Echo.POST("/user/sign-up", api.UserHandler.HandleSignUp)
 	api.Echo.POST("/user/sign-in", api.UserHandler.HandleSignIn)
-	friends:= api.Echo.Group("/friends", middleware.JWTMiddleWare())
-	friends.POST("/user/friendship", api.UserHandler.HandleFriendship)
-	friends.GET("/user/list-friend", api.UserHandler.HandleGetListFriend)
+	api.Echo.GET("/user/profile", api.UserHandler.HandleGetProfile)
+	friends := api.Echo.Group("/friends", middleware.JWTMiddleWare())
+	friends.POST("/friendship", api.UserHandler.HandleFriendship)
+	friends.PUT("/accept", api.UserHandler.HandleAcceptFriendship)
+	friends.POST("/list-friend", api.UserHandler.HandleGetListFriend)
+	friends.POST("/list-pending", api.UserHandler.HandleGetListPending)
+	friends.POST("/check-friend", api.UserHandler.HandleCheckFriend)
+	friends.GET("/profile", api.UserHandler.HandleGetProfile)
+	friends.POST("/search", api.UserHandler.HandleSearchUser)
 	//chat
 	convers := api.Echo.Group("/convers", middleware.JWTMiddleWare())
 	convers.POST("/create", api.ConversHandler.CreateConversHandler)
 	convers.GET("/list", api.ConversHandler.HandleLoadListConvers)
-	convers.GET("/list/mem", api.ConversHandler.HandleLoadListMem)
+	convers.POST("/list/mem", api.ConversHandler.HandleLoadListMem)
 	convers.POST("/message/send", api.ConversHandler.HandleSendMessage)
-	convers.GET("/message/list", api.ConversHandler.HandleLoadMessages)
-	convers.PUT("/message/seen", api.ConversHandler.HandleSeenMessage)
-		//ws
-	api.Echo.GET("/ws/message", api.WsHandler.HandleWebSocketChat)
+	convers.POST("/message/seen", api.ConversHandler.HandleSeenMessage)
+	convers.POST("/message/list", api.ConversHandler.HandleLoadMessages)
+	//convers.PUT("/message/seen", api.ConversHandler.HandleSeenMessage)
+	//ws
+	api.Echo.GET("/ws/message", api.WsHandler.HandleWebSocket)
 
 }

@@ -14,3 +14,8 @@ type Message struct {
 	SendAt         time.Time `json:"sendAt,omitempty" db:"sent_at, omitempty"`
 	SeenBy pq.StringArray `json:"seenBy,omitempty" db:"seen_by, omitempty"`
 }
+type ResponSeenMessage struct {
+	ConversationId        string `json:"conversationId" db:"conversation_id, omitempty"`
+	SeenMessageId      string `json:"seenMessageId,omitempty" db:"last_message_seen_id, omitempty"`
+	UserId 				string `json:"userId,omitempty" db:"user_id, omitempty"`
+}

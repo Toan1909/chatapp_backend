@@ -11,5 +11,9 @@ type UserRepo interface {
 	SaveUser(c context.Context, user model.User) (model.User, error)
 	GetUserInfo(c context.Context, userId string ) (model.User, error)
 	LoadListFriend(c context.Context, userId string) ([]model.User,error)
-	SaveFriShip(c context.Context, userId ,friendId string)(model.FriendShip,error)
+	LoadListPending(c context.Context, userId string) ([]model.User,error)
+	SearchUser(c context.Context, email,phone string) (model.User,error)
+	CheckFriend(c context.Context, userId,friendId string) (string,error)
+	SaveFriendShip(c context.Context, userId ,friendId string)(model.FriendShip,error)
+	AcceptFriendShip(c context.Context, userId ,friendId string)(error)
 }

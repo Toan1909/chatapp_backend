@@ -10,8 +10,8 @@ import (
 )
 
 type WebSocketHandler struct {
-	Clients   map[string]map[*websocket.Conn]bool // Map conversation_id -> (map client_conn -> boolean)
-	Broadcast chan model.Message
+	Clients   map[string]map[*websocket.Conn]bool // Map user_id -> (map client_conn -> boolean)
+	Broadcast chan model.ResponseWs
 	Upgrader  websocket.Upgrader // WebSocket upgrader
 }
 
@@ -19,7 +19,7 @@ type WebSocketHandler struct {
 func NewWebSocketHandler() *WebSocketHandler {
 	return &WebSocketHandler{
 		Clients:   make(map[string]map[*websocket.Conn]bool),
-		Broadcast: make(chan model.Message),
+		Broadcast: make(chan model.ResponseWs),
 		Upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -30,11 +30,11 @@ func NewWebSocketHandler() *WebSocketHandler {
 	}
 }
 
-// HandleWebSocketChat xử lý kết nối WebSocket
-func (h *WebSocketHandler) HandleWebSocketChat(c echo.Context) error {
-	conversationID := c.QueryParam("conversationId")
-	if conversationID == "" {
-		return c.JSON(http.StatusBadRequest, "Missing conversation_id")
+// HandleWebSocket xử lý kết nối WebSocket
+func (h *WebSocketHandler) HandleWebSocket(c echo.Context) error {
+	wsId := c.QueryParam("wsId")
+	if wsId == "" {
+		return c.JSON(http.StatusBadRequest, "Missing wsId")
 	}
 
 	ws, err := h.Upgrader.Upgrade(c.Response(), c.Request(), nil)
@@ -44,24 +44,27 @@ func (h *WebSocketHandler) HandleWebSocketChat(c echo.Context) error {
 	}
 	defer ws.Close()
 
-	if _, ok := h.Clients[conversationID]; !ok {
-		h.Clients[conversationID] = make(map[*websocket.Conn]bool)
+	if _, ok := h.Clients[wsId]; !ok {
+		h.Clients[wsId] = make(map[*websocket.Conn]bool)
 	}
-	h.Clients[conversationID][ws] = true
+	h.Clients[wsId][ws] = true
 
 	for {
-		var msg model.Message
-		err := ws.ReadJSON(&msg)
+		_, _, err := ws.NextReader() // Chỉ lắng nghe kết nối mà không đọc dữ liệu
 		if err != nil {
-			log.Println("Error reading json:", err)
-			delete(h.Clients[conversationID], ws)
-			if len(h.Clients[conversationID]) == 0 {
-				delete(h.Clients, conversationID)
+			log.Println("Client disconnected or error:", err)
+
+			// Khi có lỗi, xóa kết nối khỏi danh sách
+			delete(h.Clients[wsId], ws)
+
+			// Nếu không còn client nào trong wsId, xóa luôn wsId
+			if len(h.Clients[wsId]) == 0 {
+				delete(h.Clients, wsId)
 			}
+
+			// Thoát khỏi vòng lặp khi có lỗi
 			break
 		}
-
-		h.Broadcast <- msg
 	}
 
 	return nil
@@ -70,16 +73,18 @@ func (h *WebSocketHandler) HandleWebSocketChat(c echo.Context) error {
 // BroadcastMessages lắng nghe kênh broadcast và gửi tin nhắn tới tất cả các client
 func (h *WebSocketHandler) BroadcastMessages() {
 	for {
-		msg := <-h.Broadcast
-		if clients, ok := h.Clients[msg.ConversationId]; ok {
-			for client := range clients {
-				err := client.WriteJSON(msg)
-				if err != nil {
-					log.Println("Error writing json:", err)
-					client.Close()
-					delete(clients, client)
-					if len(clients) == 0 {
-						delete(h.Clients, msg.ConversationId)
+		response := <-h.Broadcast
+		for _,u := range response.Clients{
+			if clients, ok := h.Clients[u.UserId]; ok {
+				for client := range clients {
+					err := client.WriteJSON(response)
+					if err != nil {
+						log.Println("Error writing json:", err)
+						client.Close()
+						delete(clients, client)
+						if len(clients) == 0 {
+							delete(h.Clients, u.UserId)
+						}
 					}
 				}
 			}

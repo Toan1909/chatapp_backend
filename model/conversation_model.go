@@ -8,4 +8,5 @@ type Conversation struct {
 	IsGroup          bool	`json:"isGroup" db:"is_group, omitempty"`
 	CreatedAt        time.Time`json:"createdAt,omitempty" db:"created_at, omitempty"`
 	UpdatedAt 		 time.Time`json:"updatedAt,omitempty" db:"updated_at, omitempty"`
+				
 }

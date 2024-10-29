@@ -11,5 +11,5 @@ type SendMessage struct {
 }
 type ReqReadReceipt struct {
 	MessageId      string    `json:"messageId,omitempty" db:"message_id, omitempty"`
-	UserId       string    `json:"userId,omitempty" db:"user_id, omitempty"`
+	ConversationId string	`json:"conversationId,omitempty" db:"conversation_id, omitempty"`
 }
